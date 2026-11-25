@@ -42,7 +42,8 @@ fi
 [ -f .env ] || { adim "Erişim anahtarı üretiliyor..."; npm run -s anahtar >>"$LOG" 2>&1 || hata "Erişim anahtarı üretilemedi."; }
 if [ ! -f frontend/out/index.html ] || ! node guncel.mjs arayuz; then
   adim "Arayüz hazırlanıyor..."
-  NEXT_TELEMETRY_DISABLED=1 npm run build >>"$LOG" 2>&1 || hata "Arayüz derlenemedi."
+  # </dev/null: derleme aracı soru sorarsa (ör. sürüm yükseltme) beklemeden geçer
+  NEXT_TELEMETRY_DISABLED=1 npm run build >>"$LOG" 2>&1 </dev/null || hata "Arayüz derlenemedi."
   node guncel.mjs arayuz kaydet
 fi
 

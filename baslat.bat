@@ -32,7 +32,9 @@ if not exist "frontend\out\index.html" goto arayuz
 node guncel.mjs arayuz && goto arayuz_tamam
 :arayuz
 echo Arayuz hazirlaniyor...
-call npm run build || (pause & exit /b 1)
+rem <nul: derleme araci soru sorarsa (or. surum yukseltme) beklemeden gecer
+set NEXT_TELEMETRY_DISABLED=1
+call npm run build <nul || (pause & exit /b 1)
 node guncel.mjs arayuz kaydet
 :arayuz_tamam
 if not defined PORT set PORT=8765
