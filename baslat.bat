@@ -19,9 +19,22 @@ if not exist ".node\node.exe" (echo Node.js indirilemedi. Internet baglantinizi 
 set "PATH=%~dp0.node;%PATH%"
 
 :hazir
-if not exist "node_modules" (echo Ilk kurulum yapiliyor, birkac dakika surer... & call npm install --no-fund --no-audit || (echo Kurulum basarisiz. & pause & exit /b 1))
+rem Guncellemeden sonra (yeni ZIP ya da git pull) paketler ve arayuz kendiliginden yenilenir
+if not exist "node_modules" goto paketler
+node guncel.mjs paketler && goto paketler_tamam
+:paketler
+echo Paketler kuruluyor / guncelleniyor, birkac dakika surer...
+call npm install --no-fund --no-audit || (echo Kurulum basarisiz. & pause & exit /b 1)
+node guncel.mjs paketler kaydet
+:paketler_tamam
 if not exist ".env" call npm run anahtar
-if not exist "frontend\out\index.html" (echo Arayuz hazirlaniyor... & call npm run build || (pause & exit /b 1))
+if not exist "frontend\out\index.html" goto arayuz
+node guncel.mjs arayuz && goto arayuz_tamam
+:arayuz
+echo Arayuz hazirlaniyor...
+call npm run build || (pause & exit /b 1)
+node guncel.mjs arayuz kaydet
+:arayuz_tamam
 if not defined PORT set PORT=8765
 echo.
 echo Senaryo Asistani aciliyor (tarayici kendiliginden acilir)...

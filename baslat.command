@@ -33,14 +33,17 @@ elif ! node_ok; then
 fi
 adim "Node.js $(node -v) · npm $(npm -v)"
 
-if [ ! -d node_modules ]; then
-  adim "İlk kurulum yapılıyor (paketler), birkaç dakika sürer..."
+# Güncellemeden sonra (yeni ZIP ya da git pull) paketler ve arayüz kendiliğinden yenilenir
+if [ ! -d node_modules ] || ! node guncel.mjs paketler; then
+  adim "Paketler kuruluyor / güncelleniyor, birkaç dakika sürer..."
   npm install --no-fund --no-audit >>"$LOG" 2>&1 || { rm -rf node_modules; hata "Paketler kurulamadı."; }
+  node guncel.mjs paketler kaydet
 fi
 [ -f .env ] || { adim "Erişim anahtarı üretiliyor..."; npm run -s anahtar >>"$LOG" 2>&1 || hata "Erişim anahtarı üretilemedi."; }
-if [ ! -f frontend/out/index.html ]; then
-  adim "Arayüz hazırlanıyor (bir kez)..."
+if [ ! -f frontend/out/index.html ] || ! node guncel.mjs arayuz; then
+  adim "Arayüz hazırlanıyor..."
   NEXT_TELEMETRY_DISABLED=1 npm run build >>"$LOG" 2>&1 || hata "Arayüz derlenemedi."
+  node guncel.mjs arayuz kaydet
 fi
 
 export PORT="${PORT:-8765}"
