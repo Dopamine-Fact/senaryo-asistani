@@ -69,6 +69,6 @@ eski-python/  önceki Python sürümü (yalnızca başvuru için)
 - **Kurallar:** hazır setler (yabancı kelime, fazlalık, kötü örnek davranış kalıpları, argo, yazım, ha/he/be),
   onay bekleyen öğrenilenler, sürüm karşılaştırma, yeni kural.
 - **Export:** temiz ya da izlenen değişiklikli .docx; yalnızca değişen kelimeler değişir.
-- **Ayarlar:** OpenAI API anahtarı (isteğe bağlı), revizyon ve fikir modelleri, üyeler, Claude bağlayıcı adresi, yedek indir/birleştir.
+- **Ayarlar:** revizyon ve fikir modelleri (OpenAI API anahtarı `.env` → `OPENAI_API_KEY`), üyeler, Claude bağlayıcı adresi, yedek indir/birleştir.
 
 Veriler `~/.senaryo-asistani` klasöründedir (Python sürümüyle aynı; geçişte hiçbir şey kaybolmaz).

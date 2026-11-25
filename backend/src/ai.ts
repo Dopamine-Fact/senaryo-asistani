@@ -36,14 +36,13 @@ const ALT_SCHEMA = { type: "object", additionalProperties: false, required: ["su
 
 export const aiReady = () => {
   const c = loadConfig();
-  return c.ai_enabled && !!(c.openai_key || process.env.OPENAI_API_KEY);
+  return c.ai_enabled && !!process.env.OPENAI_API_KEY;
 };
 // Sol yüksek düşünmede ilk yanıttan önce 5 dakikadan uzun düşünebilir; Node'un varsayılan 5 dk bekleme sınırı isteği keserdi.
 const TIMEOUT = 15 * 60_000;
 const http = new Agent({ headersTimeout: TIMEOUT, bodyTimeout: TIMEOUT });
 const client = () => {
-  const k = loadConfig().openai_key.trim();
-  return new OpenAI({ ...(k ? { apiKey: k } : {}), timeout: TIMEOUT, fetch: undiciFetch as any, fetchOptions: { dispatcher: http } as any });
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: TIMEOUT, fetch: undiciFetch as any, fetchOptions: { dispatcher: http } as any });
 };
 
 async function houseExamples(limit = 60) {

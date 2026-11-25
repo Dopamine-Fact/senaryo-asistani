@@ -23,18 +23,26 @@ export const PORT = Number(process.env.PORT || 8765);
 export const HOST = process.env.HOST || "127.0.0.1";
 
 // model_revizyon: senaryo incelemesi; model_fikir: yeni öneri ve not uygulama (fikir geliştirme)
-export type Config = { openai_key: string; model_revizyon: string; model_fikir: string; ai_enabled: boolean; auto_learn: boolean; author: string };
+// OpenAI API anahtarı burada değil, ortam değişkeninde (.env → OPENAI_API_KEY) tutulur.
+export type Config = { model_revizyon: string; model_fikir: string; ai_enabled: boolean; auto_learn: boolean; author: string };
 export const DEFAULT_CONFIG: Config = {
-  openai_key: "", model_revizyon: "gpt-6.1-sol", model_fikir: "gpt-6.1-terra", ai_enabled: true, auto_learn: false, author: "Senaryo Asistanı",
+  model_revizyon: "gpt-6.1-sol", model_fikir: "gpt-6.1-terra", ai_enabled: true, auto_learn: false, author: "Senaryo Asistanı",
 };
 
 export function loadConfig(): Config {
-  try {
-    return { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8")) };
-  } catch {
-    return { ...DEFAULT_CONFIG };
-  }
+  let saved: any = {};
+  try { saved = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8")); } catch {}
+  // Yalnızca bilinen alanlar: eski sürümde ayarlara kaydedilmiş API anahtarı arayüze geri gönderilmesin
+  return Object.fromEntries(Object.entries(DEFAULT_CONFIG).map(([k, v]) => [k, saved[k] ?? v])) as Config;
 }
+
+// Eski sürüm anahtarı Ayarlar sayfasından ayarlar.json'a yazıyordu; artık okunmuyor, .env'ye taşınmalı
+try {
+  const old = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+  if ((old.openai_key || old.api_key) && !process.env.OPENAI_API_KEY) {
+    console.warn(`⚠ ${CONFIG_PATH} içinde eski bir OpenAI API anahtarı var ama artık kullanılmıyor. Anahtarı .env dosyasına OPENAI_API_KEY=... olarak ekleyin (sunucuda ortam değişkeni olarak).`);
+  }
+} catch {}
 
 export function saveConfig(update: Partial<Config>): Config {
   const cfg = loadConfig();

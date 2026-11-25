@@ -162,7 +162,7 @@ app.post("/api/findings/:id/decide", async (req: any) => (await svc.decide(req.p
 app.post("/api/findings/:id/alternatives", async (req: any) => {
   const f = await db.getFinding(req.params.id);
   if (!f) throw fail(404, "Bulgu yok");
-  if (!svc.aiReady()) throw fail(400, "OpenAI bağlantısı yok. Ayarlar'dan OpenAI API anahtarı ekleyin.");
+  if (!svc.aiReady()) throw fail(400, "OpenAI bağlantısı yok. Sunucunun .env dosyasına OPENAI_API_KEY ekleyin (Ayarlar'da yapay zekâ da açık olmalı).");
   const t = (await readTexts((await db.getDocument(f.doc_id))!.stored_path))[f.paragraph];
   try { return await db.addSuggestions(f.id, await alternatives(f.original, t, f.reason, f.suggestions)); }
   catch (e: any) { throw fail(502, `OpenAI hatası: ${e.message}`); }
@@ -229,15 +229,10 @@ app.patch("/api/rules/:id", async (req: any) => (await db.updateRule(req.params.
 app.delete("/api/rules/:id", async (req: any) => (await db.deleteRule(req.params.id), { ok: true }));
 
 // ---------------------------------------------------------------- ayarlar ve yedek
-const masked = () => { const c = loadConfig(), k = c.openai_key; return { ...c, openai_key: k.length > 12 ? `${k.slice(0, 7)}…${k.slice(-4)}` : "", openai_key_set: !!k }; };
-app.get("/api/settings", async () => masked());
-app.post("/api/settings", async (req: any) => {
-  const b = { ...req.body };
-  if (String(b.openai_key ?? "").includes("…")) delete b.openai_key; // maskeli değer geri geldi
-  if (typeof b.openai_key === "string") b.openai_key = b.openai_key.trim();
-  saveConfig(b);
-  return masked();
-});
+// API anahtarı ayarlardan değil ortam değişkeninden gelir; arayüze yalnızca tanımlı olup olmadığı söylenir
+const settings = () => ({ ...loadConfig(), openai_key_set: !!process.env.OPENAI_API_KEY });
+app.get("/api/settings", async () => settings());
+app.post("/api/settings", async (req: any) => { saveConfig(req.body ?? {}); return settings(); });
 app.get("/api/yedek", async (_req, reply) => {
   const { name, data } = await makeBackup();
   return reply.header("Content-Disposition", `attachment; filename="${name}"`).type("application/zip").send(data);

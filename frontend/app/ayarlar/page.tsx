@@ -16,8 +16,9 @@ export default function Ayarlar() {
         <h3>OpenAI bağlantısı</h3>
         <p className="sub">Kural listesi API anahtarı olmadan da çalışır. Yapay zekâ, listede olmayan ama bağlamdan anlaşılan sorunları bulur ve öneri üretir.
           Senaryo revizyonu (inceleme) bir modelle, fikir geliştirme (yeni öneri, notu uygulama) başka bir modelle yapılır.</p>
+        <p className="sub">API anahtarı: {s.openai_key_set ? <b>tanımlı</b> : <b>tanımlı değil</b>}. Anahtar sunucunun <code>.env</code> dosyasındaki
+          <code> OPENAI_API_KEY</code> değişkeninden okunur; değiştirdikten sonra uygulamayı yeniden başlatın.</p>
         <div className="kv">
-          <label>OpenAI API anahtarı</label><input type="password" placeholder="sk-…" value={s.openai_key} onChange={(e) => setS({ ...s, openai_key: e.target.value })} />
           <label>Revizyon modeli</label><input placeholder="gpt-6.1-sol" value={s.model_revizyon} onChange={(e) => setS({ ...s, model_revizyon: e.target.value })} />
           <label>Fikir geliştirme modeli</label><input placeholder="gpt-6.1-terra" value={s.model_fikir} onChange={(e) => setS({ ...s, model_fikir: e.target.value })} />
           <label>Yapay zekâ ile incele</label><label><input type="checkbox" checked={s.ai_enabled} onChange={(e) => setS({ ...s, ai_enabled: e.target.checked })} /> Yüklemelerde OpenAI'yı kullan</label>

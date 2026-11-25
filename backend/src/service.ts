@@ -174,7 +174,7 @@ export async function exportDoc(docId: string, tracked = false, dest?: string) {
 export async function applyNote(noteId: string) {
   const note = await db.getNote(noteId);
   if (!note || note.scope !== "yer" || !note.doc_id) throw new Error("Yalnızca senaryoda bir yere yazılmış notlar uygulanabilir");
-  if (!aiReady()) throw new Error("OpenAI bağlantısı yok. Ayarlar'dan OpenAI API anahtarı ekleyin ya da notu MCP bağlayıcısından uygulatın.");
+  if (!aiReady()) throw new Error("OpenAI bağlantısı yok. Sunucunun .env dosyasına OPENAI_API_KEY ekleyin ya da notu MCP bağlayıcısından uygulatın.");
   const doc = (await db.getDocument(note.doc_id))!, texts = await readTexts(doc.stored_path), para = texts[note.paragraph] ?? "";
   const ctx = texts.slice(Math.max(0, note.paragraph - 4), note.paragraph + 5).filter((t) => t.trim()).join("\n");
   const r = await aiApplyNote(note, para, ctx);
