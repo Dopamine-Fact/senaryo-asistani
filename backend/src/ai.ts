@@ -1,6 +1,7 @@
 // OpenAI ile bağlamsal senaryo incelemesi: yönerge + kural listesi + Bellek'teki ekip notları.
 // Revizyon (senaryo incelemesi) Sol ile, fikir geliştirme (yeni öneri, not uygulama) Terra ile yapılır.
 import OpenAI from "openai";
+import { Agent, fetch as undiciFetch } from "undici";
 import { loadConfig } from "./config.js";
 import * as db from "./db.js";
 import { promptExamples } from "./memory.js";
@@ -37,7 +38,13 @@ export const aiReady = () => {
   const c = loadConfig();
   return c.ai_enabled && !!(c.openai_key || process.env.OPENAI_API_KEY);
 };
-const client = () => { const k = loadConfig().openai_key.trim(); return k ? new OpenAI({ apiKey: k }) : new OpenAI(); };
+// Sol yüksek düşünmede ilk yanıttan önce 5 dakikadan uzun düşünebilir; Node'un varsayılan 5 dk bekleme sınırı isteği keserdi.
+const TIMEOUT = 15 * 60_000;
+const http = new Agent({ headersTimeout: TIMEOUT, bodyTimeout: TIMEOUT });
+const client = () => {
+  const k = loadConfig().openai_key.trim();
+  return new OpenAI({ ...(k ? { apiKey: k } : {}), timeout: TIMEOUT, fetch: undiciFetch as any, fetchOptions: { dispatcher: http } as any });
+};
 
 function houseExamples(limit = 60) {
   return db.listRules("aktif").filter((r) => r.replacements.length && r.match_type !== "desen")
@@ -75,12 +82,12 @@ async function callJson(task: Task, input: string, schema: object, maxTokens: nu
     ...(effort ? { reasoning: { effort } } : {}),
   };
   let r;
-  try { r = await client().responses.create(req, { timeout: 15 * 60_000 }); }
+  try { r = await client().responses.create(req); }
   catch (e: any) {
     // Düşünme ayarını desteklemeyen bir model seçildiyse ayarsız yeniden dene
     if (!req.reasoning || e?.status !== 400 || !/reasoning/i.test(e?.message ?? "")) throw e;
     delete req.reasoning;
-    r = await client().responses.create(req, { timeout: 15 * 60_000 });
+    r = await client().responses.create(req);
   }
   try { return r.output_text ? JSON.parse(r.output_text) : null; } catch { return null; } // max_output_tokens ile kesilmiş ya da reddedilmiş olabilir
 }
