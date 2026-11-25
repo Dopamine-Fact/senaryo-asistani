@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 
 export default function Giris() {
   const [ad, setAd] = useState(""), [anahtar, setAnahtar] = useState(""), [err, setErr] = useState(""), [wait, setWait] = useState(false);
-  const [info, setInfo] = useState<{ ipucu: string; env: string | null } | null>(null);
+  const [info, setInfo] = useState<{ ipucu: string; uzunluk: number; env: string | null } | null>(null);
   useEffect(() => {
     try { setAd(localStorage.getItem("sa_ad") || ""); } catch {}
     fetch("/api/giris-bilgi").then((r) => r.json()).then(setInfo).catch(() => {});
@@ -28,12 +28,12 @@ export default function Giris() {
         <h1><span className="dot" />Senaryo Asistanı</h1>
         <p className="sub">Üye girişi. Bellek, kurallar ve senaryolar tüm ekip tarafından ortak kullanılır.</p>
         <label>Adınız<input value={ad} onChange={(e) => setAd(e.target.value)} autoComplete="name" required placeholder="ör. Zümrüt" /></label>
-        <label>Erişim anahtarı (256 bayt)
+        <label>Erişim anahtarı
           <textarea value={anahtar} onChange={(e) => setAnahtar(e.target.value)} required rows={4} spellCheck={false}
             placeholder=".env dosyasındaki SENARYO_ERISIM_ANAHTARI değerini yapıştırın" autoComplete="current-password" />
         </label>
         <div className="hint">
-          {clean ? <>Girdiğiniz: {clean.length}/512 karakter{clean.length >= 4 ? `, …${clean.slice(-4).toLowerCase()} ile bitiyor` : ""}. </> : null}
+          {clean ? <>Girdiğiniz: {clean.length}/{info?.uzunluk ?? 512} karakter{clean.length >= 4 ? `, …${clean.slice(-4).toLowerCase()} ile bitiyor` : ""}. </> : null}
           {info && <>Bu kurulumun anahtarı …<b>{info.ipucu}</b> ile bitiyor{info.env ? <> ve şu dosyada: <code style={{ wordBreak: "break-all" }}>{info.env}</code></> : null}.</>}
         </div>
         <div className="err">{err}</div>

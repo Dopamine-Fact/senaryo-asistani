@@ -1,15 +1,34 @@
-// Üyelik: .env'deki 256 baytlık erişim anahtarıyla giriş; imzalı oturum çerezi; MCP bağlantı yolu.
+// Üyelik: .env'deki erişim anahtarıyla giriş; imzalı oturum çerezi; MCP bağlantı yolu.
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { DATA_DIR } from "./config.js";
 
 export const COOKIE = "sa_oturum";
 export const MAX_AGE = 60 * 60 * 24 * 90; // 90 gün
 
+// 512 karakter: `npm run anahtar` ile üretilen; 128 karakter: anahtar boşken sunucunun kendi ürettiği
+export const validKey = (k: string) => /^([0-9a-f]{128}|[0-9a-f]{512})$/i.test(k);
+
 export function accessKey(): string {
   const k = (process.env.SENARYO_ERISIM_ANAHTARI || "").trim();
-  if (!/^[0-9a-f]{512}$/i.test(k)) {
-    throw new Error("SENARYO_ERISIM_ANAHTARI .env dosyasında yok ya da 256 bayt (512 onaltılık karakter) değil. `npm run anahtar` ile üretin.");
+  if (!validKey(k)) {
+    throw new Error("SENARYO_ERISIM_ANAHTARI 128 ya da 512 onaltılık karakter değil. Boş bırakın (sunucu üretir) ya da `npm run anahtar` ile üretin.");
   }
   return k.toLowerCase();
+}
+
+/** Anahtar boşsa veri klasöründekini kullanır, o da yoksa 128 karakterlik yenisini üretip yazar; her iki durumda konsola basar. */
+export function ensureKey() {
+  if ((process.env.SENARYO_ERISIM_ANAHTARI || "").trim()) return accessKey();
+  // Veri klasörüne yazılır ki her yeniden başlatmada/deploy'da anahtar (ve oturumlar) değişmesin
+  const file = path.join(DATA_DIR, "erisim_anahtari");
+  const saved = fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim() : "";
+  const k = validKey(saved) ? saved : crypto.randomBytes(64).toString("hex");
+  if (k !== saved) fs.writeFileSync(file, k + "\n", { encoding: "utf8", mode: 0o600 });
+  process.env.SENARYO_ERISIM_ANAHTARI = k;
+  console.log(`SENARYO_ERISIM_ANAHTARI boş; ${k === saved ? "kayıtlı" : "yeni üretilen"} anahtar kullanılıyor (${file}):\n${k}`);
+  return k;
 }
 
 const hmac = (label: string, msg: string) => crypto.createHmac("sha256", accessKey()).update(label + ":" + msg).digest("hex");

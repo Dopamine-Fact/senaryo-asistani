@@ -17,7 +17,7 @@ import { createMcpServer } from "./mcp.js";
 import * as svc from "./service.js";
 import { importBackup, makeBackup } from "./backup.js";
 
-auth.accessKey(); // anahtar yoksa açıkça hata ver
+auth.ensureKey(); // boşsa üretir, geçersizse açıkça hata verir
 const out = path.join(ROOT, "frontend/out");
 const app = Fastify({
   logger: false, trustProxy: true, bodyLimit: 20 * 1024 * 1024,
@@ -47,7 +47,7 @@ app.addHook("onRequest", async (req, reply) => {
 const LOCAL = HOST === "127.0.0.1" || HOST === "localhost";
 const ENV_PATH = path.join(ROOT, ".env");
 // Giriş ekranı için: bu kurulumun anahtarı nerede, hangi karakterlerle bitiyor (yalnızca kişisel kullanımda klasör gösterilir)
-app.get("/api/giris-bilgi", async () => ({ ipucu: auth.keyHint(), env: LOCAL ? ENV_PATH : null }));
+app.get("/api/giris-bilgi", async () => ({ ipucu: auth.keyHint(), uzunluk: auth.accessKey().length, env: LOCAL ? ENV_PATH : null }));
 
 app.post("/api/giris", async (req, reply) => {
   const { ad = "", anahtar = "" } = (req.body ?? {}) as any;
@@ -55,8 +55,9 @@ app.post("/api/giris", async (req, reply) => {
   if (!name) throw fail(401, "Adınızı yazın.");
   if (!auth.checkKey(String(anahtar))) {
     const given = String(anahtar).replace(/\s+/g, "");
-    const why = !/^[0-9a-f]{512}$/i.test(given)
-      ? `Girdiğiniz değer ${given.length} karakter; erişim anahtarı 512 karakter olmalı (eksik ya da fazla kopyalanmış olabilir).`
+    const want = auth.accessKey().length;
+    const why = given.length !== want || !auth.validKey(given)
+      ? `Girdiğiniz değer ${given.length} karakter; erişim anahtarı ${want} karakter olmalı (eksik ya da fazla kopyalanmış olabilir).`
       : `Girdiğiniz anahtar …${auth.keyHint(given)} ile bitiyor, bu kurulumun anahtarı …${auth.keyHint()} ile bitiyor. Farklı bir kurulumun anahtarını girmiş ya da başka bir klasördeki .env dosyasını düzenlemiş olabilirsiniz; .env değiştiyse uygulamayı kapatıp yeniden açın.`;
     throw fail(401, why);
   }
