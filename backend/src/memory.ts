@@ -55,7 +55,7 @@ async function buildLessons(notedPath: string, finalPath: string | null, sourceN
 }
 
 export async function rebuildPair(key: string) {
-  const files = Object.fromEntries(db.memoryFiles(key).map((f) => [f.kind, f]));
+  const files = Object.fromEntries((await db.memoryFiles(key)).map((f) => [f.kind, f]));
   let lessons: any[] = [];
   if (files.notlu) lessons = await buildLessons(files.notlu.stored_path, files.son?.stored_path ?? null, files.notlu.name);
   if (files.son?.comment_count) lessons.push(...(await buildLessons(files.son.stored_path, null, files.son.name)));
@@ -66,7 +66,7 @@ export async function rebuildPair(key: string) {
 /** Dosyayı belleğe ekler; tür adından belirlenir (son hâllerde de ikinci tur notlar olabilir). */
 export async function ingestFile(file: string, name: string, user?: string) {
   const comments = await extractComments(file), kind = isNoted(name) ? "notlu" : "son", key = pairKey(name);
-  db.addMemoryFile(file, name, kind, key, comments.length, user);
+  await db.addMemoryFile(file, name, kind, key, comments.length, user);
   return { pair_key: key, kind, comments: comments.length, lessons: await rebuildPair(key) };
 }
 
@@ -93,8 +93,8 @@ export const similarity = (a: string[], b: string[]) => {
 // ---------------------------------------------------------------- Yapay zekâya ve kurallara giden Bellek
 const clip = (s: string, n: number) => { s = s.split(/\s+/).join(" "); return s.length <= n ? s : s.slice(0, n - 1) + "…"; };
 
-export function promptExamples(maxChars = 120_000) {
-  const lessons = db.listLessons(true).sort((a, b) => Number(b.edited) - Number(a.edited));
+export async function promptExamples(maxChars = 120_000) {
+  const lessons = (await db.listLessons(true)).sort((a, b) => Number(b.edited) - Number(a.edited));
   const seen = new Set<string>(), byCat = new Map<string, any[]>();
   for (const l of lessons) {
     const k = trLower(l.note.split(/\s+/).join(" ")).slice(0, 160);
@@ -125,9 +125,9 @@ const norm = (s: string) => trLower(s).replace(/[\s.,;:!?…“”"'’]+/g, " "
 export type MemSugg = { text: string; kaynak: "bellek"; ref: string; note: string };
 
 /** Ekibin yaptığı düzeltmeler: normalize edilmiş eski ifade -> öneriler (kaynaklı). */
-export function suggestionIndex() {
+export async function suggestionIndex() {
   const index = new Map<string, MemSugg[]>();
-  for (const l of db.listLessons(true)) {
+  for (const l of await db.listLessons(true)) {
     const ref = l.source_name.replace(/[-_ ]*(commented|yorumlu|notlu)?\.docx$/i, "");
     for (const ch of l.changes) {
       const k = norm(ch.old);
@@ -138,4 +138,4 @@ export function suggestionIndex() {
   }
   return index;
 }
-export const suggestionsFor = (original: string, index = suggestionIndex()) => (index.get(norm(original)) ?? []).slice(0, 4);
+export const suggestionsFor = (original: string, index: Map<string, MemSugg[]>) => (index.get(norm(original)) ?? []).slice(0, 4);

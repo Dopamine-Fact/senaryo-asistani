@@ -40,7 +40,7 @@ npm run mcp:kur    # Claude Desktop'a yerel MCP sunucusunu ekler
 ```
 backend/   Fastify + TypeScript (tsx ile derlemesiz çalışır)
   src/server.ts    API, üyelik, statik arayüz, Claude bağlayıcısı (/baglanti/<gizli>/mcp)
-  src/db.ts        SQLite (node:sqlite) — Python sürümüyle aynı şema, veriler ortak
+  src/db.ts        PostgreSQL (.env → DATABASE_URL) — tüm veriler ve yüklenen .docx dosyaları; veri klasörü yalnızca önbellek
   src/docx.ts      .docx okuma, yorumlar, izlenen değişiklikler, biçimi koruyan yazma
   src/text.ts      Türkçe küçük harf, ünlü uyumu, kural taraması, metin farkı
   src/memory.ts    Bellek: notlu + son hâl eşleştirme, notlardan ders çıkarma

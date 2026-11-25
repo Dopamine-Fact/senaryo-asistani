@@ -17,7 +17,6 @@ if (fs.existsSync(envFile)) {
 
 export const DATA_DIR = process.env.SENARYO_ASISTANI_DATA || path.join(os.homedir(), ".senaryo-asistani");
 for (const sub of ["belgeler", "bellek", "exports"]) fs.mkdirSync(path.join(DATA_DIR, sub), { recursive: true });
-export const DB_PATH = path.join(DATA_DIR, "veri.sqlite3");
 const CONFIG_PATH = path.join(DATA_DIR, "ayarlar.json");
 
 export const PORT = Number(process.env.PORT || 8765);

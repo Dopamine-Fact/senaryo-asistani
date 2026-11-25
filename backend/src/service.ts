@@ -9,11 +9,11 @@ import { diffPairs, matchCase, scanParagraph, type Pair } from "./text.js";
 
 export { aiReady };
 
-function saveLearned(pairs: Pair[], label: string) {
+async function saveLearned(pairs: Pair[], label: string) {
   const status = loadConfig().auto_learn ? "aktif" : "aday";
   const rules = pairsToRules(pairs);
   for (const r of rules) {
-    db.addRule(r.pattern, r.replacements, { match_type: r.match_type, category: "öğrenilen", source: "ogrenilen", status,
+    await db.addRule(r.pattern, r.replacements, { match_type: r.match_type, category: "öğrenilen", source: "ogrenilen", status,
       reason: `${label} içinde ekip tarafından değiştirildi.`, example: r.example });
   }
   return rules.length;
@@ -32,27 +32,27 @@ const fitPunct = (orig: string, s: string) => {
 };
 
 export async function scanRules(docId: string) {
-  const doc = db.getDocument(docId)!, texts = await readTexts(doc.stored_path), rules = db.listRules("aktif"), idx = suggestionIndex();
-  db.clearFindings(docId, "kural");
+  const doc = (await db.getDocument(docId))!, texts = await readTexts(doc.stored_path), rules = await db.listRules("aktif"), idx = await suggestionIndex();
+  await db.clearFindings(docId, "kural");
   let n = 0;
-  texts.forEach((text, pi) => {
-    if (!text.trim()) return;
+  for (const [pi, text] of texts.entries()) {
+    if (!text.trim()) continue;
     for (const h of scanParagraph(text, rules)) {
       // önce ekibin geçmişte aynı ifade için yaptığı düzeltmeler (Bellek), sonra kural önerileri
       const sugg = [...suggestionsFor(h.original, idx).map((m) => ({ ...m, text: matchCase(h.original, fitPunct(h.original, m.text)) })),
         ...h.suggestions.map((t) => ({ text: t, kaynak: "kural", ref: "" }))];
-      db.addFinding(docId, pi, h.start, h.end, h.original, sugg, { category: h.category, reason: h.reason, severity: h.severity, rule_id: h.rule_id });
+      await db.addFinding(docId, pi, h.start, h.end, h.original, sugg, { category: h.category, reason: h.reason, severity: h.severity, rule_id: h.rule_id });
       n++;
     }
-  });
+  }
   return n;
 }
 
 export async function scanAi(docId: string, progress?: (d: number, t: number) => void) {
-  const doc = db.getDocument(docId)!, texts = await readTexts(doc.stored_path);
-  db.clearFindings(docId, "ai");
-  const found = await analyze(texts, progress, db.listNotes({ doc_id: docId }));
-  for (const f of found) db.addFinding(docId, f.paragraph, f.start, f.end, f.original, f.suggestions, { category: f.category, reason: f.reason, severity: f.severity, source: "ai" });
+  const doc = (await db.getDocument(docId))!, texts = await readTexts(doc.stored_path);
+  await db.clearFindings(docId, "ai");
+  const found = await analyze(texts, progress, await db.listNotes({ doc_id: docId }));
+  for (const f of found) await db.addFinding(docId, f.paragraph, f.start, f.end, f.original, f.suggestions, { category: f.category, reason: f.reason, severity: f.severity, source: "ai" });
   return found.length;
 }
 
@@ -62,14 +62,15 @@ export async function rescanAllRules() {
   if (rescanning) { again = true; return; }
   rescanning = true;
   try {
-    do { again = false; for (const d of db.listDocuments()) await scanRules(d.id).catch(() => {}); } while (again);
+    do { again = false; for (const d of await db.listDocuments()) await scanRules(d.id).catch(() => {}); } while (again);
   } finally { rescanning = false; }
 }
 
 async function findPrevious(doc: any, texts: string[]) {
   let best: any = null, bestSim = 0.6;
-  for (const o of db.listDocuments().slice(0, 30)) {
-    if (o.id === doc.id || o.uploaded_at > doc.uploaded_at) continue;
+  for (const d of (await db.listDocuments()).slice(0, 30)) {
+    if (d.id === doc.id || d.uploaded_at > doc.uploaded_at) continue;
+    const o = (await db.getDocument(d.id))!; // dosyası önbellekte yoksa veritabanından alınır
     const sim = similarity(await readTexts(o.stored_path).catch(() => []), texts);
     if (sim > bestSim && sim < 0.9999) { best = o; bestSim = sim; }
   }
@@ -78,48 +79,48 @@ async function findPrevious(doc: any, texts: string[]) {
 
 /** Yükleme sonrası tam akış: öğren -> kural taraması -> (varsa) OpenAI taraması. */
 export async function processDoc(docId: string, runAi = true) {
-  const doc = db.getDocument(docId)!;
+  const doc = (await db.getDocument(docId))!;
   const st = (status: string, detail = "") => db.updateDocument(docId, { status, status_detail: detail });
   try {
-    st("analiz", "Belge okunuyor");
+    await st("analiz", "Belge okunuyor");
     const texts = await readTexts(doc.stored_path);
-    db.updateDocument(docId, { paragraph_count: texts.length });
-    st("analiz", "Değişikliklerden öğreniliyor");
+    await db.updateDocument(docId, { paragraph_count: texts.length });
+    await st("analiz", "Değişikliklerden öğreniliyor");
     let learned = 0;
     const tracked = await trackedChangeVersions(doc.stored_path);
-    if (tracked.length) learned += saveLearned(tracked.flatMap(([, o, n]) => diffPairs(o, n)), `'${doc.name}' (izlenen değişiklikler)`);
+    if (tracked.length) learned += await saveLearned(tracked.flatMap(([, o, n]) => diffPairs(o, n)), `'${doc.name}' (izlenen değişiklikler)`);
     const prev = await findPrevious(doc, texts);
     if (prev) {
-      db.updateDocument(docId, { previous_id: prev.id });
+      await db.updateDocument(docId, { previous_id: prev.id });
       learned += await learnFromVersions(prev.stored_path, doc.stored_path, `'${prev.name}' -> '${doc.name}'`);
     }
-    db.updateDocument(docId, { learned_count: learned });
-    st("analiz", "Kurallar taranıyor");
+    await db.updateDocument(docId, { learned_count: learned });
+    await st("analiz", "Kurallar taranıyor");
     await scanRules(docId);
     if (runAi && aiReady()) {
-      try { await scanAi(docId, (d, t) => st("analiz", `OpenAI inceliyor (${d}/${t})`)); }
+      try { await scanAi(docId, (d, t) => void st("analiz", `OpenAI inceliyor (${d}/${t})`).catch(() => {})); }
       catch (e: any) { return st("hazir", `OpenAI hatası: ${e.message}`); }
     }
-    st("hazir");
-  } catch (e: any) { st("hata", String(e.message ?? e)); }
+    await st("hazir");
+  } catch (e: any) { await st("hata", String(e.message ?? e)); }
 }
 
 export async function ingest(file: string, name?: string, runAi = true, user?: string) {
-  const doc = db.storeDocument(file, name, user);
+  const doc = await db.storeDocument(file, name, user);
   await processDoc(doc.id, runAi);
-  return db.getDocument(doc.id)!;
+  return (await db.getDocument(doc.id))!;
 }
 
 // ---------------------------------------------------------------- kararlar ve düzenleme
-export function decide(id: string, action: string, text?: string | null, remember = true) {
-  const f = db.getFinding(id);
+export async function decide(id: string, action: string, text?: string | null, remember = true) {
+  const f = await db.getFinding(id);
   if (!f) return null;
   if (action === "red") return db.decideFinding(id, "red");
   if (action === "geri") return db.decideFinding(id, "bekliyor");
   const chosen = text ?? f.suggestions[0] ?? "";
-  const res = db.decideFinding(id, "kabul", chosen);
+  const res = await db.decideFinding(id, "kabul", chosen);
   if (remember && f.source !== "kural" && f.original.split(/\s+/).length <= 6) {
-    db.addRule(f.original, [chosen], { match_type: f.original.includes(" ") ? "ifade" : "kelime", category: f.category || "öğrenilen",
+    await db.addRule(f.original, [chosen], { match_type: f.original.includes(" ") ? "ifade" : "kelime", category: f.category || "öğrenilen",
       reason: f.reason, source: "ogrenilen", status: loadConfig().auto_learn ? "aktif" : "aday", example: f.original });
   }
   return res;
@@ -148,40 +149,40 @@ function wordDiff(a: string, b: string) {
 
 /** Editörün senaryoda doğrudan yazdığı paragrafı, yalnızca değişen kelimeler olarak kaydeder (biçim korunur). */
 export async function editParagraph(docId: string, p: number, newText: string) {
-  const doc = db.getDocument(docId)!, texts = await readTexts(doc.stored_path);
+  const doc = (await db.getDocument(docId))!, texts = await readTexts(doc.stored_path);
   if (p < 0 || p >= texts.length) throw new Error("Geçersiz paragraf");
   const old = texts[p];
   newText = newText.replace(/\r\n/g, "\n");
-  if (newText === previewParagraph(old, db.listFindings(docId).filter((f) => f.paragraph === p))) return null;
-  if (newText === old) { db.deleteFindingsInRange(docId, p, 0, old.length); return null; }
+  if (newText === previewParagraph(old, (await db.listFindings(docId)).filter((f) => f.paragraph === p))) return null;
+  if (newText === old) { await db.deleteFindingsInRange(docId, p, 0, old.length); return null; }
   const [os, oe, ns, ne] = wordDiff(old, newText);
-  db.deleteFindingsInRange(docId, p, os, oe);
+  await db.deleteFindingsInRange(docId, p, os, oe);
   return db.addFinding(docId, p, os, oe, old.slice(os, oe), [], { category: "editör", reason: "Editör tarafından senaryoda doğrudan düzenlendi.",
     severity: "dusuk", source: "manuel", status: "kabul", chosen: newText.slice(ns, ne) });
 }
 
 export async function exportDoc(docId: string, tracked = false, dest?: string) {
-  const doc = db.getDocument(docId);
+  const doc = await db.getDocument(docId);
   if (!doc) throw new Error("Belge bulunamadı");
   const stem = path.parse(doc.name).name.replace(/[<>:"/\\|?*]+/g, "_");
   const out = dest ?? path.join(DATA_DIR, "exports", `${stem}${tracked ? "_revize_izlenen" : "_revize"}.docx`);
-  const r = await applyChanges(doc.stored_path, out, db.listFindings(docId, "kabul"), tracked, loadConfig().author || "Senaryo Asistanı");
-  return { ...r, path: out, pending: db.listFindings(docId, "bekliyor").length };
+  const r = await applyChanges(doc.stored_path, out, await db.listFindings(docId, "kabul"), tracked, loadConfig().author || "Senaryo Asistanı");
+  return { ...r, path: out, pending: (await db.listFindings(docId, "bekliyor")).length };
 }
 
 /** Yere yazılmış bir notu OpenAI'ya (fikir modeli) uygulatır: o kısım için önerili bir bulgu oluşturur. */
 export async function applyNote(noteId: string) {
-  const note = db.getNote(noteId);
+  const note = await db.getNote(noteId);
   if (!note || note.scope !== "yer" || !note.doc_id) throw new Error("Yalnızca senaryoda bir yere yazılmış notlar uygulanabilir");
   if (!aiReady()) throw new Error("OpenAI bağlantısı yok. Ayarlar'dan OpenAI API anahtarı ekleyin ya da notu MCP bağlayıcısından uygulatın.");
-  const doc = db.getDocument(note.doc_id)!, texts = await readTexts(doc.stored_path), para = texts[note.paragraph] ?? "";
+  const doc = (await db.getDocument(note.doc_id))!, texts = await readTexts(doc.stored_path), para = texts[note.paragraph] ?? "";
   const ctx = texts.slice(Math.max(0, note.paragraph - 4), note.paragraph + 5).filter((t) => t.trim()).join("\n");
   const r = await aiApplyNote(note, para, ctx);
   if (!r) throw new Error("OpenAI bir öneri üretemedi");
   let s = r.quote ? para.indexOf(r.quote) : -1, e = s + r.quote.length;
   if (s < 0) { s = note.start ?? 0; e = note.end ?? para.length; } // bulunamazsa editörün seçtiği aralık
-  const f = db.addFinding(doc.id, note.paragraph, s, e, para.slice(s, e), r.suggestions,
+  const f = await db.addFinding(doc.id, note.paragraph, s, e, para.slice(s, e), r.suggestions,
     { category: "editör notu", reason: `Not: ${note.text}${r.reason ? " — " + r.reason : ""}`, severity: "orta", source: "not" });
-  db.updateNote(note.id, { status: "uygulandi" });
+  await db.updateNote(note.id, { status: "uygulandi" });
   return f;
 }

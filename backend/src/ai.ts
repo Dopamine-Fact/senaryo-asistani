@@ -46,20 +46,20 @@ const client = () => {
   return new OpenAI({ ...(k ? { apiKey: k } : {}), timeout: TIMEOUT, fetch: undiciFetch as any, fetchOptions: { dispatcher: http } as any });
 };
 
-function houseExamples(limit = 60) {
-  return db.listRules("aktif").filter((r) => r.replacements.length && r.match_type !== "desen")
+async function houseExamples(limit = 60) {
+  return (await db.listRules("aktif")).filter((r) => r.replacements.length && r.match_type !== "desen")
     .sort((a, b) => Number(a.source !== "ogrenilen") - Number(b.source !== "ogrenilen") || b.hits - a.hits).slice(0, limit)
     .map((r) => `- "${r.pattern}" -> ${r.replacements.slice(0, 3).map((x: string) => (x ? `"${x}"` : "(kaldır)")).join(" | ")}  [${r.category}]`)
     .join("\n");
 }
 
 /** Sistem istemi bölümleri; sabit kısımlar başta durur ki OpenAI'ın otomatik önbelleği tekrar kullanabilsin. */
-export function buildSystem() {
+export async function buildSystem() {
   const blocks: { text: string }[] = [{ text: data.systemPrompt }], extra: string[] = [];
-  const ex = houseExamples(), lessons = promptExamples(), rules = db.getGuidelines();
+  const ex = await houseExamples(), lessons = await promptExamples(), rules = await db.getGuidelines();
   if (rules.length) extra.push("EKİP YÖNERGELERİ VE GÜNCELLEMELERİ (Geliştir sekmesi) — kesin talimatlar; her incelemede uygula, "
     + "bunlara giren her durumu ısrarla işaretle:\n" + rules.map((r) => `- [${r.kind}] ${r.text}`).join("\n"));
-  const learned = db.listNotes({ learnOnly: true }).filter((n) => n.scope !== "genel").slice(0, 120);
+  const learned = (await db.listNotes({ learnOnly: true })).filter((n) => n.scope !== "genel").slice(0, 120);
   if (learned.length) extra.push("EDİTÖR NOTLARI — editörlerin önceki senaryolara yazdığı notlar. Yeni senaryolarda benzer durumları aynı "
     + "hassasiyetle işaretle:\n" + learned.map((n) => `- ${n.quote ? `«${n.quote.slice(0, 200)}» → ` : "(senaryonun geneli) "}${n.text}`).join("\n"));
   if (ex) extra.push("Ekibin kural listesi (bu ifadeler görüldüğünde benzer öneriler ver):\n" + ex);
@@ -75,7 +75,7 @@ const modelFor = (t: Task) => { const c = loadConfig(); return (t === "revizyon"
 async function callJson(task: Task, input: string, schema: object, maxTokens: number, effort?: "medium" | "high"): Promise<any | null> {
   const req: any = {
     model: modelFor(task),
-    instructions: buildSystem().map((b) => b.text).join("\n\n"),
+    instructions: (await buildSystem()).map((b) => b.text).join("\n\n"),
     input,
     max_output_tokens: maxTokens,
     text: { format: { type: "json_schema", name: "sonuc", schema, strict: true } },
