@@ -33,7 +33,7 @@ Başka bilgisayarlara hiçbir şey kurmak gerekmez; Windows ya da Mac fark etmez
 3. Sizden iki değer ister:
    - **SENARYO_ERISIM_ANAHTARI**: bilgisayarınızdaki `.env` dosyasında duran 256 baytlık anahtar
      (512 karakter). Olduğu gibi yapıştırın; ekip bu anahtarla giriş yapar.
-   - **ANTHROPIC_API_KEY**: isteğe bağlı. Girerseniz site, yüklenen her senaryoyu Claude ile otomatik
+   - **OPENAI_API_KEY**: isteğe bağlı. Girerseniz site, yüklenen her senaryoyu OpenAI ile otomatik
      inceler. Boş bırakabilirsiniz; Claude Desktop/claude.ai bağlayıcısıyla da inceleme yapılabilir.
 4. **Apply** deyin. Birkaç dakika sonra siteniz `https://senaryo-asistani-xxxx.onrender.com` gibi bir
    adreste açılır.

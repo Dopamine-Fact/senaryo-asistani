@@ -23,7 +23,7 @@ export default function Gelistir() {
     <section className="view active"><div className="page"><div className="page-inner">
       <div className="box">
         <h3>Geliştir</h3>
-        <p className="sub">Yapay zekâyı burada geliştirin. Yazdığınız her güncelleme ekipteki herkes için geçerlidir ve Claude her senaryo incelemesinde
+        <p className="sub">Yapay zekâyı burada geliştirin. Yazdığınız her güncelleme ekipteki herkes için geçerlidir ve yapay zekâ her senaryo incelemesinde
           bunlara kesin talimat olarak uyar. Kural koymak, karakterleri tanıtmak, üslubu anlatmak ya da "bundan sonra şuna dikkat et" demek için kullanın;
           örnek vermek en etkili yoldur.</p>
         <div className="composer">
@@ -69,7 +69,7 @@ export default function Gelistir() {
 
       <div className="box">
         <h3>Senaryolardan öğrenilen editör notları</h3>
-        <p className="sub">Senaryo Geliştirme'de yazılan AI notları. "Öğren" açık olanlar yeni senaryoların incelemesinde de Claude'a verilir.</p>
+        <p className="sub">Senaryo Geliştirme'de yazılan AI notları. "Öğren" açık olanlar yeni senaryoların incelemesinde de yapay zekâya verilir.</p>
         <div className="feed">
           {fromScripts.map((n) => (
             <div key={n.id} className={`notecard ${n.learn ? "" : "cozuldu"}`}>

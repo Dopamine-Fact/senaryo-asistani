@@ -44,10 +44,10 @@ backend/   Fastify + TypeScript (tsx ile derlemesiz çalışır)
   src/docx.ts      .docx okuma, yorumlar, izlenen değişiklikler, biçimi koruyan yazma
   src/text.ts      Türkçe küçük harf, ünlü uyumu, kural taraması, metin farkı
   src/memory.ts    Bellek: notlu + son hâl eşleştirme, notlardan ders çıkarma
-  src/ai.ts        Claude incelemesi (yönerge + kurallar + Bellek, önbellekli)
+  src/ai.ts        OpenAI incelemesi: revizyon gpt-6.1-sol, fikir geliştirme gpt-6.1-terra
   src/service.ts   iş akışları  ·  src/backup.ts yedek/birleştirme  ·  src/auth.ts erişim anahtarı
   src/mcp.ts       17 MCP aracı (stdio: mcp-stdio.ts, HTTP: server.ts)
-  src/data.json    varsayılan kurallar, Claude yönergesi, kategoriler
+  src/data.json    varsayılan kurallar, yapay zekâ yönergesi, kategoriler
 frontend/  Next.js (App Router, statik çıktı) — her pencere bir sayfa
   app/page.tsx (Senaryo Geliştirme) · bellek/ · kurallar/ · export/ · ayarlar/ · giris/
 eski-python/  önceki Python sürümü (yalnızca başvuru için)
@@ -55,20 +55,20 @@ eski-python/  önceki Python sürümü (yalnızca başvuru için)
 
 ## Pencereler (özet)
 
-- **Senaryo Geliştirme:** .docx bırakın; kurallar + Bellek + (varsa) Claude tarar. Karttaki alıntıya
+- **Senaryo Geliştirme:** .docx bırakın; kurallar + Bellek + (varsa) OpenAI Sol tarar. Karttaki alıntıya
   tıklayınca senaryoda o kısma gidilir ve yerinde düzenlenir; paragrafa çift tıklayıp kendiniz yazabilirsiniz.
-  Öneriler kaynağıyla gelir: **Bellek · bölüm**, **Claude**, **Kural**.
+  Öneriler kaynağıyla gelir: **Bellek · bölüm**, **AI**, **Kural**.
 - **AI notları:** Senaryoda bir kısmı seçip **📝 AI notu** ile o yere not yazın (ör. "Burada Keday çok sert konuşuyor,
-  yumuşat") ya da sağdaki **Notlar** sekmesinden senaryonun geneline not bırakın. Claude bu senaryoyu incelerken notları uygular;
-  yere yazılan notu **✦ Claude'a uygulat** ile hemen öneriye çevirebilirsiniz. "Sonraki incelemelerde de dikkate al" işaretli
+  yumuşat") ya da sağdaki **Notlar** sekmesinden senaryonun geneline not bırakın. Yapay zekâ bu senaryoyu incelerken notları uygular;
+  yere yazılan notu **✦ Terra'ya uygulat** ile hemen öneriye çevirebilirsiniz. "Sonraki incelemelerde de dikkate al" işaretli
   notlar yeni senaryoların incelemesinde de kullanılır.
 - **Geliştir:** Yapay zekâya ekip güncellemeleri yazın (yönerge, karakter bilgisi, üslup, yasaklı/tercih edilen ifade…).
-  Claude her incelemede bunlara kesin talimat olarak uyar; "AI'da kullan" kutusuyla açıp kapatabilirsiniz.
+  Yapay zekâ her incelemede bunlara kesin talimat olarak uyar; "AI'da kullan" kutusuyla açıp kapatabilirsiniz.
 - **Bellek:** `-commented` notlu senaryolar + son hâlleri; notlar, işaretlenen kısım ve ekibin düzeltmesiyle
   öğrenilir. Yanlış çıkarılan düzeltmeyi satıra tıklayıp kendiniz yazabilirsiniz.
 - **Kurallar:** hazır setler (yabancı kelime, fazlalık, kötü örnek davranış kalıpları, argo, yazım, ha/he/be),
   onay bekleyen öğrenilenler, sürüm karşılaştırma, yeni kural.
 - **Export:** temiz ya da izlenen değişiklikli .docx; yalnızca değişen kelimeler değişir.
-- **Ayarlar:** Claude API anahtarı (isteğe bağlı), üyeler, Claude bağlayıcı adresi, yedek indir/birleştir.
+- **Ayarlar:** OpenAI API anahtarı (isteğe bağlı), revizyon ve fikir modelleri, üyeler, Claude bağlayıcı adresi, yedek indir/birleştir.
 
 Veriler `~/.senaryo-asistani` klasöründedir (Python sürümüyle aynı; geçişte hiçbir şey kaybolmaz).

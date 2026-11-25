@@ -12,5 +12,5 @@ services:
     envVars:
       - key: SENARYO_ERISIM_ANAHTARI
         sync: false          # .env'deki 256 baytlık anahtarı yapıştırın
-      - key: ANTHROPIC_API_KEY
+      - key: OPENAI_API_KEY
         sync: false          # isteğe bağlı

@@ -13,12 +13,14 @@ export default function Ayarlar() {
   return (
     <section className="view active"><div className="page"><div className="page-inner">
       <div className="box">
-        <h3>Claude bağlantısı</h3>
-        <p className="sub">Kural listesi API anahtarı olmadan da çalışır. Claude, listede olmayan ama bağlamdan anlaşılan sorunları bulur ve öneri üretir.</p>
+        <h3>OpenAI bağlantısı</h3>
+        <p className="sub">Kural listesi API anahtarı olmadan da çalışır. Yapay zekâ, listede olmayan ama bağlamdan anlaşılan sorunları bulur ve öneri üretir.
+          Senaryo revizyonu (inceleme) bir modelle, fikir geliştirme (yeni öneri, notu uygulama) başka bir modelle yapılır.</p>
         <div className="kv">
-          <label>API anahtarı</label><input type="password" placeholder="sk-ant-…" value={s.api_key} onChange={(e) => setS({ ...s, api_key: e.target.value })} />
-          <label>Model</label><input value={s.model} onChange={(e) => setS({ ...s, model: e.target.value })} />
-          <label>Claude ile incele</label><label><input type="checkbox" checked={s.ai_enabled} onChange={(e) => setS({ ...s, ai_enabled: e.target.checked })} /> Yüklemelerde Claude'u kullan</label>
+          <label>OpenAI API anahtarı</label><input type="password" placeholder="sk-…" value={s.openai_key} onChange={(e) => setS({ ...s, openai_key: e.target.value })} />
+          <label>Revizyon modeli</label><input placeholder="gpt-6.1-sol" value={s.model_revizyon} onChange={(e) => setS({ ...s, model_revizyon: e.target.value })} />
+          <label>Fikir geliştirme modeli</label><input placeholder="gpt-6.1-terra" value={s.model_fikir} onChange={(e) => setS({ ...s, model_fikir: e.target.value })} />
+          <label>Yapay zekâ ile incele</label><label><input type="checkbox" checked={s.ai_enabled} onChange={(e) => setS({ ...s, ai_enabled: e.target.checked })} /> Yüklemelerde OpenAI'yı kullan</label>
           <label>Otomatik öğrenme</label><label><input type="checkbox" checked={s.auto_learn} onChange={(e) => setS({ ...s, auto_learn: e.target.checked })} /> Öğrenilenleri onay beklemeden kural yap</label>
           <label>Değişiklik yazarı</label><input placeholder="İzlenen değişikliklerde görünen ad" value={s.author} onChange={(e) => setS({ ...s, author: e.target.value })} />
         </div>

@@ -23,9 +23,10 @@ const CONFIG_PATH = path.join(DATA_DIR, "ayarlar.json");
 export const PORT = Number(process.env.PORT || 8765);
 export const HOST = process.env.HOST || "127.0.0.1";
 
-export type Config = { api_key: string; model: string; ai_enabled: boolean; auto_learn: boolean; author: string };
+// model_revizyon: senaryo incelemesi; model_fikir: yeni öneri ve not uygulama (fikir geliştirme)
+export type Config = { openai_key: string; model_revizyon: string; model_fikir: string; ai_enabled: boolean; auto_learn: boolean; author: string };
 export const DEFAULT_CONFIG: Config = {
-  api_key: "", model: "claude-opus-5-5", ai_enabled: true, auto_learn: false, author: "Senaryo Asistanı",
+  openai_key: "", model_revizyon: "gpt-6.1-sol", model_fikir: "gpt-6.1-terra", ai_enabled: true, auto_learn: false, author: "Senaryo Asistanı",
 };
 
 export function loadConfig(): Config {
@@ -41,7 +42,9 @@ export function saveConfig(update: Partial<Config>): Config {
   for (const k of Object.keys(DEFAULT_CONFIG) as (keyof Config)[]) {
     if (update[k] !== undefined) (cfg as any)[k] = update[k];
   }
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), "utf8");
+  // Yalnızca bilinen alanlar yazılır: eski sürümden kalan Claude anahtarı (api_key) ilk kayıtta silinir
+  const known = Object.fromEntries(Object.keys(DEFAULT_CONFIG).map((k) => [k, (cfg as any)[k]]));
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(known, null, 2), "utf8");
   return cfg;
 }
 

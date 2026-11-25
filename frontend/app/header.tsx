@@ -19,7 +19,7 @@ export default function Header() {
       <nav>
         {NAV.map(([href, label]) => <Link key={href} href={href} className={norm(path) === href ? "active" : ""}>{label}</Link>)}
       </nav>
-      <span className={`status-chip ${st?.ai_ready ? "on" : ""}`}>{st ? (st.ai_ready ? "Claude bağlı" : "Yalnızca kurallar (Claude kapalı)") : "…"}</span>
+      <span className={`status-chip ${st?.ai_ready ? "on" : ""}`}>{st ? (st.ai_ready ? "OpenAI bağlı" : "Yalnızca kurallar (OpenAI kapalı)") : "…"}</span>
       {st && <span className="status-chip" style={{ marginLeft: 0 }}>👤 {st.user}</span>}
       {st && <button className="ghost" onClick={async () => { await fetch("/api/cikis", { method: "POST" }); location.href = "/giris/"; }}>Çıkış</button>}
     </header>

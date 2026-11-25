@@ -90,7 +90,7 @@ export const similarity = (a: string[], b: string[]) => {
   return x.length && y.length ? new SequenceMatcher(x, y).ratio() : 0;
 };
 
-// ---------------------------------------------------------------- Claude'a ve kurallara giden Bellek
+// ---------------------------------------------------------------- Yapay zekâya ve kurallara giden Bellek
 const clip = (s: string, n: number) => { s = s.split(/\s+/).join(" "); return s.length <= n ? s : s.slice(0, n - 1) + "…"; };
 
 export function promptExamples(maxChars = 120_000) {

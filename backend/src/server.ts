@@ -1,4 +1,4 @@
-// Fastify API + derlenmiş Next.js arayüzü + Claude bağlayıcısı (MCP over HTTP).
+// Fastify API + derlenmiş Next.js arayüzü + MCP bağlayıcısı (MCP over HTTP).
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -123,8 +123,8 @@ app.post("/api/docs/:id/rescan", async (req: any) => {
     db.updateDocument(id, { status: "analiz", status_detail: "Kurallar taranıyor" });
     await svc.scanRules(id);
     if (ai && svc.aiReady()) {
-      try { await svc.scanAi(id, (d, t) => db.updateDocument(id, { status_detail: `Claude inceliyor (${d}/${t})` })); }
-      catch (e: any) { return db.updateDocument(id, { status: "hazir", status_detail: `Claude hatası: ${e.message}` }); }
+      try { await svc.scanAi(id, (d, t) => db.updateDocument(id, { status_detail: `OpenAI inceliyor (${d}/${t})` })); }
+      catch (e: any) { return db.updateDocument(id, { status: "hazir", status_detail: `OpenAI hatası: ${e.message}` }); }
     }
     db.updateDocument(id, { status: "hazir", status_detail: "" });
   })());
@@ -161,10 +161,10 @@ app.post("/api/findings/:id/decide", async (req: any) => svc.decide(req.params.i
 app.post("/api/findings/:id/alternatives", async (req: any) => {
   const f = db.getFinding(req.params.id);
   if (!f) throw fail(404, "Bulgu yok");
-  if (!svc.aiReady()) throw fail(400, "Claude bağlantısı yok. Ayarlar'dan API anahtarı ekleyin.");
+  if (!svc.aiReady()) throw fail(400, "OpenAI bağlantısı yok. Ayarlar'dan OpenAI API anahtarı ekleyin.");
   const t = (await readTexts(db.getDocument(f.doc_id)!.stored_path))[f.paragraph];
   try { return db.addSuggestions(f.id, await alternatives(f.original, t, f.reason, f.suggestions)); }
-  catch (e: any) { throw fail(502, `Claude hatası: ${e.message}`); }
+  catch (e: any) { throw fail(502, `OpenAI hatası: ${e.message}`); }
 });
 
 // ---------------------------------------------------------------- bellek
@@ -228,11 +228,12 @@ app.patch("/api/rules/:id", async (req: any) => db.updateRule(req.params.id, req
 app.delete("/api/rules/:id", async (req: any) => (db.deleteRule(req.params.id), { ok: true }));
 
 // ---------------------------------------------------------------- ayarlar ve yedek
-const masked = () => { const c = loadConfig(), k = c.api_key; return { ...c, api_key: k.length > 12 ? `${k.slice(0, 7)}…${k.slice(-4)}` : "", api_key_set: !!k }; };
+const masked = () => { const c = loadConfig(), k = c.openai_key; return { ...c, openai_key: k.length > 12 ? `${k.slice(0, 7)}…${k.slice(-4)}` : "", openai_key_set: !!k }; };
 app.get("/api/settings", async () => masked());
 app.post("/api/settings", async (req: any) => {
   const b = { ...req.body };
-  if (String(b.api_key ?? "").includes("…")) delete b.api_key; // maskeli değer geri geldi
+  if (String(b.openai_key ?? "").includes("…")) delete b.openai_key; // maskeli değer geri geldi
+  if (typeof b.openai_key === "string") b.openai_key = b.openai_key.trim();
   saveConfig(b);
   return masked();
 });

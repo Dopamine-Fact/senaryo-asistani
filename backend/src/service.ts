@@ -76,7 +76,7 @@ async function findPrevious(doc: any, texts: string[]) {
   return best;
 }
 
-/** Yükleme sonrası tam akış: öğren -> kural taraması -> (varsa) Claude taraması. */
+/** Yükleme sonrası tam akış: öğren -> kural taraması -> (varsa) OpenAI taraması. */
 export async function processDoc(docId: string, runAi = true) {
   const doc = db.getDocument(docId)!;
   const st = (status: string, detail = "") => db.updateDocument(docId, { status, status_detail: detail });
@@ -97,8 +97,8 @@ export async function processDoc(docId: string, runAi = true) {
     st("analiz", "Kurallar taranıyor");
     await scanRules(docId);
     if (runAi && aiReady()) {
-      try { await scanAi(docId, (d, t) => st("analiz", `Claude inceliyor (${d}/${t})`)); }
-      catch (e: any) { return st("hazir", `Claude hatası: ${e.message}`); }
+      try { await scanAi(docId, (d, t) => st("analiz", `OpenAI inceliyor (${d}/${t})`)); }
+      catch (e: any) { return st("hazir", `OpenAI hatası: ${e.message}`); }
     }
     st("hazir");
   } catch (e: any) { st("hata", String(e.message ?? e)); }
@@ -169,15 +169,15 @@ export async function exportDoc(docId: string, tracked = false, dest?: string) {
   return { ...r, path: out, pending: db.listFindings(docId, "bekliyor").length };
 }
 
-/** Yere yazılmış bir notu Claude'a uygulatır: o kısım için önerili bir bulgu oluşturur. */
+/** Yere yazılmış bir notu OpenAI'ya (fikir modeli) uygulatır: o kısım için önerili bir bulgu oluşturur. */
 export async function applyNote(noteId: string) {
   const note = db.getNote(noteId);
   if (!note || note.scope !== "yer" || !note.doc_id) throw new Error("Yalnızca senaryoda bir yere yazılmış notlar uygulanabilir");
-  if (!aiReady()) throw new Error("Claude bağlantısı yok. Ayarlar'dan API anahtarı ekleyin ya da notu Claude Desktop'tan (MCP) uygulatın.");
+  if (!aiReady()) throw new Error("OpenAI bağlantısı yok. Ayarlar'dan OpenAI API anahtarı ekleyin ya da notu MCP bağlayıcısından uygulatın.");
   const doc = db.getDocument(note.doc_id)!, texts = await readTexts(doc.stored_path), para = texts[note.paragraph] ?? "";
   const ctx = texts.slice(Math.max(0, note.paragraph - 4), note.paragraph + 5).filter((t) => t.trim()).join("\n");
   const r = await aiApplyNote(note, para, ctx);
-  if (!r) throw new Error("Claude bir öneri üretemedi");
+  if (!r) throw new Error("OpenAI bir öneri üretemedi");
   let s = r.quote ? para.indexOf(r.quote) : -1, e = s + r.quote.length;
   if (s < 0) { s = note.start ?? 0; e = note.end ?? para.length; } // bulunamazsa editörün seçtiği aralık
   const f = db.addFinding(doc.id, note.paragraph, s, e, para.slice(s, e), r.suggestions,

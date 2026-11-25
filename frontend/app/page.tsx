@@ -5,13 +5,13 @@ import { STATUS, api, busy, docxOnly, toast } from "@/lib/api";
 
 type F = any;
 const CAT_SEV: Record<string, string> = { yuksek: "bad", orta: "warn", dusuk: "info" };
-const SRC: Record<string, string> = { kural: "Kural", ai: "Claude", mcp: "MCP", manuel: "Editör" };
+const SRC: Record<string, string> = { kural: "Kural", ai: "OpenAI", mcp: "MCP", manuel: "Editör" };
 const IMPROVE = new Set(["fazlalık / gereksiz uzatma", "yabancı kelime", "iyileştirme", "kelime seçimi / üslup", "dil bilgisi / yazım", "tekrar / fazla kullanım"]);
 
 function SrcBadge({ f, text }: { f: F; text: string }) {
   const i = f.suggestion_info?.[text] ?? {};
   if (i.kaynak === "bellek") return <span className="src bellek" title={i.note || "Ekibin geçmiş düzeltmesi"}>Bellek{i.ref ? " · " + i.ref.replace(/^KUCHO-/i, "") : ""}</span>;
-  if (i.kaynak === "claude") return <span className="src claude" title="Claude'un hikâyeyi bozmadan önerdiği yeni metin">Claude</span>;
+  if (i.kaynak === "claude") return <span className="src claude" title="Yapay zekânın hikâyeyi bozmadan önerdiği yeni metin">AI</span>;
   if (i.kaynak === "kural") return <span className="src">Kural</span>;
   return null;
 }
@@ -194,7 +194,7 @@ export default function Gelistirme() {
             <b>Senaryo bırak (.docx)</b>Sürükle-bırak ya da tıkla — birden fazla dosya olabilir
             <input ref={fileRef} type="file" accept=".docx" multiple hidden onChange={(e) => { upload([...(e.target.files ?? [])]); e.target.value = ""; }} />
           </label>
-          <label className="ai-toggle"><input type="checkbox" checked={runAi} onChange={(e) => setRunAi(e.target.checked)} /> Yüklerken Claude ile de incele</label>
+          <label className="ai-toggle"><input type="checkbox" checked={runAi} onChange={(e) => setRunAi(e.target.checked)} /> Yüklerken OpenAI (Sol) ile de incele</label>
           {docs.length > 0 && (
             <div className="docbar">
               <label><input type="checkbox" checked={sel.size === docs.length} onChange={(e) => setSel(e.target.checked ? new Set(docs.map((d) => d.id)) : new Set())} />
@@ -248,7 +248,7 @@ export default function Gelistirme() {
                 <button onClick={async () => { await api(`/api/docs/${cur}/rescan`, { json: { ai: runAi } }); toast("Yeniden taranıyor…"); loadDocs(); }}>Yeniden tara</button>
                 <span className="hint" style={{ width: "100%" }}>İşaretli kısma tıklayarak değiştirin; bir paragrafı kendiniz yazmak için üzerine çift tıklayın.</span>
               </div>
-              {(isBusy || (doc.status_detail && doc.status !== "hazir") || doc.status_detail?.startsWith("Claude hatası")) && (
+              {(isBusy || (doc.status_detail && doc.status !== "hazir") || /^(Claude|OpenAI) hatası/.test(doc.status_detail ?? "")) && (
                 <div className="progress">{isBusy && <span className="spinner" />}<span>{doc.status_detail || STATUS[doc.status]}</span></div>
               )}
               <article className="paper" id="paper" onMouseUp={onMouseUp}>
@@ -353,7 +353,7 @@ function Card({ f, text, focus, onGoto, onDecide, onAlt }: { f: F; text: string;
           <button onClick={() => onDecide({ action: "kabul", text: custom })}>Koy</button>
         </div>
         <div className="actions">
-          <button className="ghost" disabled={thinking} onClick={async () => { setThinking(true); await onAlt(); setThinking(false); }}>{thinking ? "Claude düşünüyor…" : "✦ Claude'dan başka öneri"}</button>
+          <button className="ghost" disabled={thinking} onClick={async () => { setThinking(true); await onAlt(); setThinking(false); }}>{thinking ? "Terra düşünüyor…" : "✦ Terra'dan başka öneri"}</button>
           <button className="ghost" onClick={() => onDecide({ action: "red" })}>Sorun değil, yok say</button>
         </div>
       </>}
@@ -402,7 +402,7 @@ function NoteComposer({ quote, placeholder, onSave, onCancel }: { quote?: string
       <textarea autoFocus value={text} placeholder={placeholder} onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && text.trim()) { onSave(text, learn); setText(""); } if (e.key === "Escape") onCancel?.(); }} />
       <div className="row">
-        <label className="grow" title="İşaretliyse bu not sonraki senaryoların incelemesinde de Claude'a verilir">
+        <label className="grow" title="İşaretliyse bu not sonraki senaryoların incelemesinde de yapay zekâya verilir">
           <input type="checkbox" checked={learn} onChange={(e) => setLearn(e.target.checked)} /> Sonraki incelemelerde de dikkate al</label>
         {onCancel && <button className="ghost" onClick={onCancel}>Vazgeç</button>}
         <button className="primary" disabled={!text.trim()} onClick={() => { onSave(text, learn); setText(""); }}>Kaydet</button>
@@ -417,14 +417,14 @@ function NotesPanel({ notes, docId, onGoto, onChanged }: { notes: any[]; docId: 
   const sorted = [...notes].sort((a, b) => Number(a.status === "cozuldu") - Number(b.status === "cozuldu") || (a.paragraph ?? -1) - (b.paragraph ?? -1));
   return <>
     <div className="reason" style={{ margin: "2px 2px 0" }}>Bu senaryo için AI'a not yazın. Senaryoda bir kısmı seçip <b>📝 AI notu</b> ile o yere de not
-      bırakabilirsiniz. Claude bu senaryoyu incelerken notları uygular; "sonraki incelemelerde de dikkate al" işaretliyse yeni senaryolarda da.</div>
+      bırakabilirsiniz. Yapay zekâ bu senaryoyu incelerken notları uygular; "sonraki incelemelerde de dikkate al" işaretliyse yeni senaryolarda da.</div>
     <NoteComposer placeholder="Bu senaryonun geneli için not (ör. Bu bölümde Keday küçük kardeşine bakıyor; sabırlı ve sevecen olmalı)"
       onSave={async (text, learn) => { try { await api("/api/notes", { json: { scope: "senaryo", doc_id: docId, text, learn } }); toast("Not kaydedildi"); onChanged(); } catch (e: any) { toast(e.message); } }} />
     {sorted.map((n) => (
       <div key={n.id} className={`notecard ${n.status}`}>
         <div className="meta">
           <span className="badge info">{n.scope === "yer" ? `¶ ${n.paragraph + 1}` : "Senaryonun geneli"}</span>
-          {n.status === "uygulandi" && <span className="badge ok">Claude önerisi oluşturuldu</span>}
+          {n.status === "uygulandi" && <span className="badge ok">AI önerisi oluşturuldu</span>}
           {n.status === "cozuldu" && <span className="badge">Çözüldü</span>}
           <span>👤 {n.author} · {n.created_at.replace("T", " ").slice(0, 16)}</span>
         </div>
@@ -434,10 +434,10 @@ function NotesPanel({ notes, docId, onGoto, onChanged }: { notes: any[]; docId: 
         <div className="actions">
           {n.scope === "yer" && n.status !== "cozuldu" && <button disabled={busyId === n.id} onClick={async () => {
             setBusyId(n.id);
-            try { await api(`/api/notes/${n.id}/apply`, { method: "POST" }); toast("Claude notu uyguladı; öneri Bekleyen sekmesinde."); onChanged(); }
+            try { await api(`/api/notes/${n.id}/apply`, { method: "POST" }); toast("Terra notu uyguladı; öneri Bekleyen sekmesinde."); onChanged(); }
             catch (e: any) { toast(e.message, 5000); }
             setBusyId(null);
-          }}>{busyId === n.id ? "Claude uyguluyor…" : "✦ Claude'a uygulat"}</button>}
+          }}>{busyId === n.id ? "Terra uyguluyor…" : "✦ Terra'ya uygulat"}</button>}
           <button className="ghost" onClick={() => patch(n, { status: n.status === "cozuldu" ? "acik" : "cozuldu" })}>{n.status === "cozuldu" ? "Yeniden aç" : "Çözüldü"}</button>
           <button className="ghost" onClick={async () => { if (confirm("Bu not silinsin mi?")) { await api(`/api/notes/${n.id}`, { method: "DELETE" }); onChanged(); } }}>Sil</button>
         </div>

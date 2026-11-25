@@ -39,10 +39,10 @@ export function createMcpServer(user = "Claude") {
       + "bulgulari_listele ile bak, tekrar ekleme.\n- Sonunda özet sun; onaylananları oneri_uygula ile uygula, sonra export_al."].join("\n\n"));
 
   tool("senaryo_yukle", "Bir .docx senaryoyu yükler; değişikliklerden öğrenir ve kural listesiyle tarar.",
-    { dosya_yolu: z.string(), claude_api_ile_incele: z.boolean().optional() }, async (a) => {
+    { dosya_yolu: z.string(), openai_ile_incele: z.boolean().optional() }, async (a) => {
       const f = path.resolve(home(a.dosya_yolu));
       if (!fs.existsSync(f) || !f.toLowerCase().endsWith(".docx")) throw new Error(`Geçerli bir .docx bulunamadı: ${f}`);
-      const d = await svc.ingest(f, path.basename(f), !!a.claude_api_ile_incele, user);
+      const d = await svc.ingest(f, path.basename(f), !!a.openai_ile_incele, user);
       return { belge_id: d.id, ad: d.name, durum: d.status, not: d.status_detail, paragraf_sayisi: d.paragraph_count,
         ogrenilen_degisiklik: d.learned_count, bulgular: db.listFindings(d.id).map(view) };
     });
@@ -104,10 +104,10 @@ export function createMcpServer(user = "Claude") {
       const r = (x: string) => db.getDocument(x)?.stored_path ?? path.resolve(home(x));
       return { ogrenilen: await svc.learnFromVersions(r(a.eski), r(a.yeni)) };
     });
-  tool("yeniden_tara", "Güncel kurallarla belgeyi yeniden tarar.", { belge_id: z.string().optional(), claude_api_ile: z.boolean().optional() }, async (a) => {
+  tool("yeniden_tara", "Güncel kurallarla belgeyi yeniden tarar.", { belge_id: z.string().optional(), openai_ile: z.boolean().optional() }, async (a) => {
     const d = docOrLatest(a.belge_id);
     let n = await svc.scanRules(d.id);
-    if (a.claude_api_ile && aiReady()) n += await svc.scanAi(d.id);
+    if (a.openai_ile && aiReady()) n += await svc.scanAi(d.id);
     return { belge_id: d.id, bulgu: n, bulgular: db.listFindings(d.id).map(view) };
   });
   tool("not_ekle", "AI notu yazar. kapsam: 'yer' (senaryoda bir kısım: belge_id + paragraf + alinti), 'senaryo' (o senaryonun "

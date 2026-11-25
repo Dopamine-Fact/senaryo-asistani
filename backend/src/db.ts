@@ -104,7 +104,7 @@ function rebase(d: Row, sub: string): Row {
 // scope: "yer"     -> senaryoda belirli bir kısım için not (doc_id + paragraph + start/end + quote)
 //        "senaryo" -> o senaryonun tamamı için not (doc_id)
 //        "genel"   -> Geliştir sekmesindeki güncellemeler (yönerge, karakter bilgisi, üslup…)
-// learn=1: sonraki senaryo incelemelerinde de Claude'a verilir. Genel notlarda "AI'da kullan" anlamına gelir.
+// learn=1: sonraki senaryo incelemelerinde de yapay zekâya verilir. Genel notlarda "AI'da kullan" anlamına gelir.
 db.exec(`CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, scope TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'not',
   doc_id TEXT, paragraph INTEGER, start INTEGER, end INTEGER, quote TEXT NOT NULL DEFAULT '', text TEXT NOT NULL,
   author TEXT NOT NULL DEFAULT '', learn INTEGER NOT NULL DEFAULT 1, status TEXT NOT NULL DEFAULT 'acik',
@@ -162,7 +162,7 @@ export function updateNote(id: string, f: Row) {
   return getNote(id);
 }
 export const deleteNote = (id: string) => run("DELETE FROM notes WHERE id=?", id);
-/** Claude'un her incelemede uyduğu ekip güncellemeleri (Geliştir sekmesi, "AI'da kullan" açık olanlar). */
+/** Yapay zekânın her incelemede uyduğu ekip güncellemeleri (Geliştir sekmesi, "AI'da kullan" açık olanlar). */
 export const getGuidelines = () => listNotes({ scope: "genel", learnOnly: true }).reverse();
 
 // ---------------------------------------------------------------- üyeler
